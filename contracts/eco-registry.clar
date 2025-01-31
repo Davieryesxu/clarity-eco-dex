@@ -8,7 +8,8 @@
     manufacturer: principal,
     category: (string-ascii 32),
     sustainability-score: uint,
-    verified: bool
+    verified: bool,
+    creation-time: uint  ;; Added timestamp
   }
 )
 
@@ -26,6 +27,7 @@
 (define-constant contract-owner tx-sender)
 (define-constant err-not-authorized (err u100))
 (define-constant err-invalid-score (err u101))
+(define-constant err-product-not-found (err u102))
 
 ;; Public functions
 (define-public (register-product 
@@ -45,7 +47,8 @@
             manufacturer: tx-sender,
             category: category,
             sustainability-score: sustainability-score,
-            verified: false
+            verified: false,
+            creation-time: block-height
           }
         )
         (var-set next-product-id (+ product-id u1))
@@ -61,7 +64,7 @@
   (recycled uint) 
   (renewable uint)
 )
-  (let ((product (unwrap! (get-product product-id) err-not-authorized)))
+  (let ((product (unwrap! (get-product product-id) err-product-not-found)))
     (if (is-eq tx-sender (get manufacturer product))
       (begin 
         (map-set product-metrics
@@ -86,4 +89,10 @@
 
 (define-read-only (get-metrics (product-id uint))
   (map-get? product-metrics {product-id: product-id})
+)
+
+(define-read-only (get-products-by-manufacturer (manufacturer principal))
+  (filter products (lambda (product)
+    (is-eq (get manufacturer product) manufacturer)
+  ))
 )
